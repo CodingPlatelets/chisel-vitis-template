@@ -2,12 +2,12 @@ package vitisrtlkernel
 
 import chisel3._
 import chisel3.util._
-import vitisrtlkernel.interface.VitisAXIReadMaster
-import vitisrtlkernel.interface.VitisAXIWriteMaster
+import _root_.circt.stage.ChiselStage
+import vitisrtlkernel.interface.{VitisAXIReadMaster, VitisAXIWriteMaster}
 
 /**
- * Step1: Modify VitisRTLKernelDataIF  
-*/
+  * Step1: Modify VitisRTLKernelDataIF
+  */
 class VitisRTLKernelDataIF extends Bundle {
   // Register Args
   val readAddress = Input(UInt(64.W))
@@ -16,22 +16,22 @@ class VitisRTLKernelDataIF extends Bundle {
   // add your register args here...
 
   // HBM/DDR ports
-  val m00Read  = new VitisAXIReadMaster(64, 512)
+  val m00Read = new VitisAXIReadMaster(64, 512)
   val m00Write = new VitisAXIWriteMaster(64, 512)
   // add your memory ports here...
 }
 
 class VitisRTLKernel extends RawModule {
 
-  val ap_clk   = IO(Input(Clock()))
+  val ap_clk = IO(Input(Clock()))
   val reset_asyncReset = Wire(new AsyncReset)
   // Step2: Instantiate your kernel here
   val kernel = withClockAndReset(ap_clk, reset_asyncReset)(Module(new VecAdd))
 
   // !! DO NOT modify code below !!
   val ap_start = IO(Input(Bool()))
-  val ap_idle  = IO(Output(Bool()))
-  val ap_done  = IO(Output(Bool()))
+  val ap_idle = IO(Output(Bool()))
+  val ap_done = IO(Output(Bool()))
   val ap_ready = IO(Output(Bool()))
 
   val dataIF = IO(new VitisRTLKernelDataIF)
@@ -48,10 +48,9 @@ class VitisRTLKernel extends RawModule {
   val sIdle :: sReset1 :: sReset2 :: sBusy :: sDone :: Nil = Enum(5)
 
   val apStartN_asyncReset = Wire(new AsyncReset)
-  apStartN_asyncReset  := (!ap_start).asAsyncReset
-  
-  val state_r = withClockAndReset(ap_clk, apStartN_asyncReset)(RegInit(sIdle))
+  apStartN_asyncReset := (!ap_start).asAsyncReset
 
+  val state_r = withClockAndReset(ap_clk, apStartN_asyncReset)(RegInit(sIdle))
 
   switch(state_r) {
     is(sIdle) {
@@ -75,17 +74,18 @@ class VitisRTLKernel extends RawModule {
       }
     }
     is(sDone) {
-      ap_done  := true.B
+      ap_done := true.B
       ap_ready := true.B
-      state_r  := sIdle
+      state_r := sIdle
     }
   }
 }
 
 object VitisRTLKernelVerilog extends App {
-  val verilogString =
-    (new chisel3.stage.ChiselStage).emitVerilog(
-      new VitisRTLKernel,
-      args
-    )
+//  args.foreach(x =println(x))
+  ChiselStage.emitSystemVerilogFile(
+    new VitisRTLKernel,
+    firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info"),
+    args = Array("--target-dir", "./build/chisel")
+  )
 }

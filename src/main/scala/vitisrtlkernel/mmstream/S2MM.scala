@@ -24,10 +24,10 @@ class S2MM(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
     val busy = Output(Bool())
   })
 
-  val addr_reg      = Reg(UInt(ADDR_WIDTH.W))
-  val burstLen_reg  = Reg(UInt(LEN_WIDTH.W))
+  val addr_reg = Reg(UInt(ADDR_WIDTH.W))
+  val burstLen_reg = Reg(UInt(LEN_WIDTH.W))
   val issuedLen_reg = Reg(UInt(LEN_WIDTH.W))
-  val eot_reg       = RegInit(true.B)
+  val eot_reg = RegInit(true.B)
   val burstLast_wire = (burstLen_reg <= 1.U)
 
   val buffer_module = Module(
@@ -35,23 +35,23 @@ class S2MM(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
   )
 
   val isAlignedTo4KBoundry_wire = ((addr_reg & Fill(12, 1.U)) === 0.U)
-  val next4KBoundary_wire       = ((addr_reg + 4096.U) & (~"hfff".U(ADDR_WIDTH.W)).asUInt)
-  val headLen_wire = (next4KBoundary_wire - addr_reg) >> addrAlignBits
+  val next4KBoundary_wire = ((addr_reg + 4096.U) & (~"hfff".U(ADDR_WIDTH.W)).asUInt)
+  val headLen_wire = ((next4KBoundary_wire - addr_reg) >> addrAlignBits).asUInt
 
   val sIdle :: sAddrCompute :: sHeadWaitBuffer :: sHeadAddr :: sHeadData :: sHeadResp :: sWaitBuffer :: sAddr :: sData :: sResp :: Nil =
     Enum(10)
   val state_reg = RegInit(sIdle)
 
   io.busy := state_reg =/= sIdle
-  
+
   // 各个接口的初始状态
   io.req.ready := false.B
 
-  io.axiWrite.aw.valid     := false.B
+  io.axiWrite.aw.valid := false.B
   io.axiWrite.aw.bits.addr := addr_reg + (issuedLen_reg << addrAlignBits)
-  io.axiWrite.aw.bits.len  := 0.U
+  io.axiWrite.aw.bits.len := 0.U
 
-  io.axiWrite.w.valid     := false.B
+  io.axiWrite.w.valid := false.B
   io.axiWrite.w.bits.data := buffer_module.io.deq.bits
   io.axiWrite.w.bits.last := burstLast_wire
   io.axiWrite.w.bits.strb := Fill(io.axiWrite.w.bits.strb.getWidth, 1.U)
@@ -64,8 +64,8 @@ class S2MM(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
   // enqueue flow control
   val freezeBuffer_wire =
     (eot_reg || state_reg === sIdle || state_reg === sAddrCompute || state_reg === sHeadAddr || state_reg === sAddr)
-  buffer_module.io.enq.valid := ~freezeBuffer_wire && io.streamIn.valid
-  io.streamIn.ready          := ~freezeBuffer_wire && buffer_module.io.enq.ready
+  buffer_module.io.enq.valid := (!freezeBuffer_wire) && (io.streamIn.valid)
+  io.streamIn.ready := (!freezeBuffer_wire) && (buffer_module.io.enq.ready)
   when(io.streamIn.fire && io.streamIn.bits.last) {
     // streamIn 中 last 有效时置位 eot，在下一次 idle 之前不能再输入
     eot_reg := true.B
@@ -74,7 +74,7 @@ class S2MM(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
   switch(state_reg) {
     is(sIdle) {
       io.req.ready := true.B
-      when(io.req.valid){
+      when(io.req.valid) {
         eot_reg := false.B
         issuedLen_reg := 0.U
         addr_reg := Cat(io.req.bits.addr >> addrAlignBits, 0.U(addrAlignBits.W))
@@ -82,56 +82,56 @@ class S2MM(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
       }
     }
 
-    is(sAddrCompute){
-      when(isAlignedTo4KBoundry_wire){
+    is(sAddrCompute) {
+      when(isAlignedTo4KBoundry_wire) {
         // 直接按 4K 处理
         state_reg := sWaitBuffer
-      }.otherwise{
+      }.otherwise {
         // 先补齐到 4K
         state_reg := sHeadWaitBuffer
       }
     }
 
-    is(sHeadWaitBuffer){
-      when(eot_reg || buffer_module.io.count >= headLen_wire){
+    is(sHeadWaitBuffer) {
+      when(eot_reg || buffer_module.io.count >= headLen_wire) {
         state_reg := sHeadAddr
       }
     }
 
-    is(sHeadAddr){
+    is(sHeadAddr) {
       io.axiWrite.aw.valid := true.B
       val burstLen_wire = Mux(buffer_module.io.count >= headLen_wire, headLen_wire, buffer_module.io.count)
       io.axiWrite.aw.bits.len := burstLen_wire - 1.U
       burstLen_reg := burstLen_wire
-      when(io.axiWrite.aw.ready){
+      when(io.axiWrite.aw.ready) {
         state_reg := sHeadData
         issuedLen_reg := issuedLen_reg + burstLen_wire
       }
     }
 
-    is(sHeadData){
+    is(sHeadData) {
       io.axiWrite.w.valid := buffer_module.io.deq.valid
       buffer_module.io.deq.ready := io.axiWrite.w.ready
-      when(buffer_module.io.deq.fire){
+      when(buffer_module.io.deq.fire) {
         burstLen_reg := burstLen_reg - 1.U
-        when(burstLast_wire){
+        when(burstLast_wire) {
           state_reg := sHeadResp
         }
       }
     }
 
-    is(sHeadResp){
+    is(sHeadResp) {
       io.axiWrite.b.ready := true.B
-      when(io.axiWrite.b.valid){
+      when(io.axiWrite.b.valid) {
         state_reg := sWaitBuffer
       }
     }
 
-    is(sWaitBuffer){
-      when(buffer_module.io.count >= BURST_LEN.U){
+    is(sWaitBuffer) {
+      when(buffer_module.io.count >= BURST_LEN.U) {
         state_reg := sAddr
-      }.elsewhen(eot_reg){
-        when(buffer_module.io.count > 0.U){
+      }.elsewhen(eot_reg) {
+        when(buffer_module.io.count > 0.U) {
           state_reg := sAddr
         }.otherwise {
           state_reg := sIdle
@@ -139,31 +139,31 @@ class S2MM(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
       }
     }
 
-    is(sAddr){
+    is(sAddr) {
       io.axiWrite.aw.valid := true.B
       val burstLen_wire = Mux(buffer_module.io.count >= BURST_LEN.U, BURST_LEN.U, buffer_module.io.count)
       io.axiWrite.aw.bits.len := burstLen_wire - 1.U
       burstLen_reg := burstLen_wire
-      when(io.axiWrite.aw.ready){
+      when(io.axiWrite.aw.ready) {
         state_reg := sData
         issuedLen_reg := issuedLen_reg + burstLen_wire
       }
     }
-    
-    is(sData){
+
+    is(sData) {
       io.axiWrite.w.valid := buffer_module.io.deq.valid
       buffer_module.io.deq.ready := io.axiWrite.w.ready
-      when(buffer_module.io.deq.fire){
+      when(buffer_module.io.deq.fire) {
         burstLen_reg := burstLen_reg - 1.U
-        when(burstLast_wire){
+        when(burstLast_wire) {
           state_reg := sResp
         }
       }
     }
 
-    is(sResp){
+    is(sResp) {
       io.axiWrite.b.ready := true.B
-      when(io.axiWrite.b.valid){
+      when(io.axiWrite.b.valid) {
         state_reg := sWaitBuffer
       }
     }

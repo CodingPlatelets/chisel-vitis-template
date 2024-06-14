@@ -36,7 +36,7 @@ class MM2S(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
   val bufferSpace_wire          = (buffer_module.entries.U - buffer_module.io.count)
   val isAlignedTo4KBoundry_wire = ((addr_reg & Fill(12, 1.U)) === 0.U)
   val next4KBoundary_wire       = ((addr_reg + 4096.U) & (~"hfff".U(ADDR_WIDTH.W)).asUInt)
-  val isAcross4KBoundry_wire    = (addr_reg + (len_reg << addrAlignBits)) > next4KBoundary_wire
+  val isAcross4KBoundry_wire    = next4KBoundary_wire < (addr_reg + (len_reg << addrAlignBits))
   io.req.ready        := false.B
   io.axiRead.ar.valid := false.B
   io.axiRead.ar.bits  := 0.U.asTypeOf(io.axiRead.ar.bits)
@@ -184,7 +184,7 @@ class MM2S(val ADDR_WIDTH: Int, val DATA_WIDTH: Int) extends Module with DebugLo
     io.streamOut.valid         := buffer_module.io.deq.valid
     buffer_module.io.deq.ready := io.streamOut.ready
     io.streamOut.bits.data     := buffer_module.io.deq.bits
-    io.streamOut.bits.last := (issuedLen_reg === len_reg - 1.U)
+    io.streamOut.bits.last     := (issuedLen_reg === len_reg - 1.U)
     when(buffer_module.io.deq.valid) {
       when(io.streamOut.ready) {
         issuedLen_reg := issuedLen_reg + 1.U

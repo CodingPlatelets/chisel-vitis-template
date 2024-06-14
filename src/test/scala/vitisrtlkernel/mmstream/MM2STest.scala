@@ -14,11 +14,11 @@ import chisel3.util.DecoupledIO
 class MM2STest extends AnyFreeSpec with ChiselScalatestTester {
 
   class AXIReadSlaveSim(
-                         val mem: MemSim,
-                         val readMaster: VitisAXIReadMaster,
-                         val clock: Clock,
-                         val gap: Boolean = false,
-                         val log: Boolean = true) {
+    val mem:        MemSim,
+    val readMaster: VitisAXIReadMaster,
+    val clock:      Clock,
+    val gap:        Boolean = false,
+    val log:        Boolean = true) {
     private var terminated = false
     private val rand = new Random()
 
@@ -78,10 +78,10 @@ class MM2STest extends AnyFreeSpec with ChiselScalatestTester {
   }
 
   class StreamSlaveSim(
-                           val master: DecoupledIO[Bundle{val data:UInt; val last:Bool}],
-                           val clock: Clock,
-                           val gap: Boolean = false,
-                           val log: Boolean = true) {
+    val master: DecoupledIO[Bundle { val data: UInt; val last: Bool }],
+    val clock:  Clock,
+    val gap:    Boolean = false,
+    val log:    Boolean = true) {
     private var last = false
     private val dataBuf = ArrayBuffer.empty[BigInt]
 
@@ -206,8 +206,8 @@ class MM2STest extends AnyFreeSpec with ChiselScalatestTester {
     test(new MM2S(64, 512))
       .withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
         val rand = new Random
-        for(i <- 0 until 10){
-          singleTranscation(dut, 64 * rand.nextInt(100),  64 * rand.nextInt(1024))
+        for (i <- 0 until 10) {
+          singleTranscation(dut, 64 * rand.nextInt(100), 64 * rand.nextInt(1024))
         }
       }
   }

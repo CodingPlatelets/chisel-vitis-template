@@ -23,56 +23,56 @@ class AXIReadSlaveSim(
 
   private def insertGap() = {
     if (gap) {
-      clock.step(rand.nextInt(5))
+      clock.step(rand.nextInt(4) + 1)
     }
   }
 
   private def isDone(): Boolean = {
-    return done.peek().litToBoolean
+    return done.peekBoolean()
   }
 
   def serve() = {
-    val ar   = readMaster.ar
-    val r    = readMaster.r
+    val ar = readMaster.ar
+    val r = readMaster.r
     val loop = new Breaks
     loop.breakable {
       while (!isDone) {
         var addr = 0
-        var len  = 0
+        var len = 0
         // 先地址
-        timescope {
-          ar.ready.poke(true.B)
-          while (!isDone && !ar.valid.peek().litToBoolean) {
-            clock.step(1)
-          }
-          addr = ar.bits.addr.peek().litValue.intValue
-          len  = ar.bits.len.peek().litValue.intValue + 1
+//        timescope {
+        ar.ready.poke(true.B)
+        while (!isDone && !ar.valid.peek().litToBoolean) {
           clock.step(1)
-          if (log && !isDone()) {
-            println(s"[AXIReadSlave] request addr=${addr} len=${len}")
-          }
         }
-        if (isDone) {
+        addr = ar.bits.addr.peek().litValue.intValue
+        len = ar.bits.len.peek().litValue.intValue + 1
+        clock.step(1)
+        if (log && !isDone()) {
+          println(s"[AXIReadSlave] request addr=${addr} len=${len}")
+        }
+//        }
+        if (isDone()) {
           loop.break()
         }
         // 再数据
         while (!isDone && len > 0) {
-          timescope {
-            insertGap()
-            r.valid.poke(true.B)
-            r.bits.data.poke(mem.read(addr, readMaster.dataWidth / 8).U)
-            r.bits.last.poke((len == 1).B)
-            while (!isDone && !r.ready.peek().litToBoolean) {
-              clock.step(1)
-            }
+//          timescope {
+          insertGap()
+          r.valid.poke(true.B)
+          r.bits.data.poke(mem.read(addr, readMaster.dataWidth / 8).U)
+          r.bits.last.poke((len == 1).B)
+          while (!isDone && !r.ready.peek().litToBoolean) {
             clock.step(1)
-            if (log) {
-              println(s"[AXIReadSlave] read addr=${addr}")
-            }
-            addr = addr + readMaster.dataWidth / 8
-            len -= 1
           }
+          clock.step(1)
+          if (log) {
+            println(s"[AXIReadSlave] read addr=${addr}")
+          }
+          addr = addr + readMaster.dataWidth / 8
+          len -= 1
         }
+//        }
       }
     }
   }
@@ -86,11 +86,11 @@ class AXIWriteSlaveSim(
   val gap:         Boolean = false,
   val log:         Boolean = true) {
   private var terminated = false
-  private val rand       = new Random()
+  private val rand = new Random()
 
   private def insertGap() = {
     if (gap) {
-      clock.step(rand.nextInt(5))
+      clock.step(rand.nextInt(4) + 1)
     }
   }
 
@@ -103,63 +103,63 @@ class AXIWriteSlaveSim(
   }
 
   def serve() = {
-    val aw   = writeMaster.aw
-    val w    = writeMaster.w
-    val b    = writeMaster.b
+    val aw = writeMaster.aw
+    val w = writeMaster.w
+    val b = writeMaster.b
     var addr = 0
-    var len  = 0
+    var len = 0
     val loop = new Breaks()
     loop.breakable {
       while (!isDone()) {
         // serve aw
-        timescope {
-          insertGap()
-          aw.ready.poke(true.B)
-          while (!isDone && !aw.valid.peek().litToBoolean) {
-            clock.step(1)
-          }
-          addr = aw.bits.addr.peek().litValue.intValue
-          len  = aw.bits.len.peek().litValue.intValue + 1
-          if (log && !isDone()) {
-            println(s"[AXIWriteSlave] request addr=${addr} len=${len}")
-          }
+//        timescope {
+        insertGap()
+        aw.ready.poke(true.B)
+        while (!isDone && !aw.valid.peek().litToBoolean) {
           clock.step(1)
         }
-        if(isDone()){
+        addr = aw.bits.addr.peek().litValue.intValue
+        len = aw.bits.len.peek().litValue.intValue + 1
+        if (log && !isDone()) {
+          println(s"[AXIWriteSlave] request addr=${addr} len=${len}")
+        }
+        clock.step(1)
+//        }
+        if (isDone()) {
           loop.break()
         }
         // serve w
         for (burstNr <- 0 until len) {
-          timescope {
-            insertGap()
-            w.ready.poke(true.B)
-            while (!isDone && !w.valid.peek().litToBoolean) {
-              clock.step(1)
-            }
-            if (log) {
-              println(s"[AXIWriteSlave] write addr=${addr + burstNr * writeMaster.dataWidth / 8}")
-            }
-            mem.write(
-              addr + burstNr * writeMaster.dataWidth / 8,
-              w.bits.data.peek().litValue,
-              writeMaster.dataWidth / 8
-            )
-            if (burstNr == len - 1) {
-              w.bits.last.expect(true.B)
-            }
+//          timescope {
+          insertGap()
+          w.ready.poke(true.B)
+          while (!isDone && !w.valid.peek().litToBoolean) {
             clock.step(1)
           }
+          if (log) {
+            println(s"[AXIWriteSlave] write addr=${addr + burstNr * writeMaster.dataWidth / 8}")
+          }
+          mem.write(
+            addr + burstNr * writeMaster.dataWidth / 8,
+            w.bits.data.peek().litValue,
+            writeMaster.dataWidth / 8
+          )
+          if (burstNr == len - 1) {
+            w.bits.last.expect(true.B)
+          }
+          clock.step(1)
+//          }
         }
 
         // serve b
-        timescope {
-          insertGap()
-          b.valid.poke(true.B)
-          while (!isDone && !b.ready.peek().litToBoolean) {
-            clock.step(1)
-          }
+//        timescope {
+        insertGap()
+        b.valid.poke(true.B)
+        while (!isDone && !b.ready.peek().litToBoolean) {
           clock.step(1)
         }
+        clock.step(1)
+//      }
       }
     }
   }

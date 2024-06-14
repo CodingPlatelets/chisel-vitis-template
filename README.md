@@ -60,6 +60,13 @@
 //inst_example (
 //  .ap_clk          ( ap_clk          ),
 //  .ap_rst_n        ( 1'b1            ),
+//  .ap_start        ( ap_start        ),
+//  .ap_done         ( ap_done         ),
+//  .ap_idle         ( ap_idle         ),
+//  .ap_ready        ( ap_ready        ),
+//  .readLength      ( readLength      ),
+//  .readAddress     ( readAddress     ),
+//  .writeAddress    ( writeAddress    ),
 //  .m00_axi_awvalid ( m00_axi_awvalid ),
 //  .m00_axi_awready ( m00_axi_awready ),
 //  .m00_axi_awaddr  ( m00_axi_awaddr  ),
@@ -78,14 +85,7 @@
 //  .m00_axi_rvalid  ( m00_axi_rvalid  ),
 //  .m00_axi_rready  ( m00_axi_rready  ),
 //  .m00_axi_rdata   ( m00_axi_rdata   ),
-//  .m00_axi_rlast   ( m00_axi_rlast   ),
-//  .ap_start        ( ap_start        ),
-//  .ap_done         ( ap_done         ),
-//  .ap_idle         ( ap_idle         ),
-//  .ap_ready        ( ap_ready        ),
-//  .readLength      ( readLength      ),
-//  .readAddress     ( readAddress     ),
-//  .writeAddress    ( writeAddress    )
+//  .m00_axi_rlast   ( m00_axi_rlast   )
 //);
 
 // 换上我们自己的

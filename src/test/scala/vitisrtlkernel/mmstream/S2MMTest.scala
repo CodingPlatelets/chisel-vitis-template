@@ -22,7 +22,7 @@ class S2MMTest extends AnyFreeSpec with ChiselScalatestTester {
     val gap:         Boolean = false,
     val log:         Boolean = true) {
     private var terminated = false
-    private val rand       = new Random()
+    private val rand = new Random()
 
     private def insertGap() = {
       if (gap) {
@@ -35,11 +35,11 @@ class S2MMTest extends AnyFreeSpec with ChiselScalatestTester {
     }
 
     def serve() = {
-      val aw   = writeMaster.aw
-      val w    = writeMaster.w
-      val b    = writeMaster.b
+      val aw = writeMaster.aw
+      val w = writeMaster.w
+      val b = writeMaster.b
       var addr = 0
-      var len  = 0
+      var len = 0
       while (!terminated) {
         // serve aw
         timescope {
@@ -49,7 +49,7 @@ class S2MMTest extends AnyFreeSpec with ChiselScalatestTester {
             clock.step(1)
           }
           addr = aw.bits.addr.peek().litValue.intValue
-          len  = aw.bits.len.peek().litValue.intValue + 1
+          len = aw.bits.len.peek().litValue.intValue + 1
           clock.step(1)
         }
 
@@ -61,7 +61,11 @@ class S2MMTest extends AnyFreeSpec with ChiselScalatestTester {
             while (!w.valid.peek().litToBoolean) {
               clock.step(1)
             }
-            mem.write(addr + burstNr * writeMaster.dataWidth / 8, w.bits.data.peek().litValue, writeMaster.dataWidth / 8)
+            mem.write(
+              addr + burstNr * writeMaster.dataWidth / 8,
+              w.bits.data.peek().litValue,
+              writeMaster.dataWidth / 8
+            )
             if (burstNr == len - 1) {
               w.bits.last.expect(true.B)
             }
@@ -137,7 +141,7 @@ class S2MMTest extends AnyFreeSpec with ChiselScalatestTester {
   }
 
   def singleTranscation(dut: S2MM, startAddr: Int, writeLen: Int) = {
-    val inMem  = new MemSim(8 * 1024 * 1024)
+    val inMem = new MemSim(8 * 1024 * 1024)
     val outMem = new MemSim(8 * 1024 * 1024)
     inMem.modInit(47)
     outMem.randomInit()
