@@ -107,6 +107,7 @@ host: $(HOST_SRC)
 	$(CXX) $(HOST_SRC)  -o $(HOST_EXECUTABLE) $(CXXFLAGS) $(LDFLAGS)
 
 run_emu: host $(HOST_EXECUTABLE)
+	export XCL_EMULATION_MODE=hw_emu
 	$(HOST_EXECUTABLE) ./xo_kernel/hw_emu/$(XCLBIN).xclbin
 
 run_hw: host $(HOST_EXECUTABLE)
